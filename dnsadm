@@ -38,10 +38,11 @@ prepare () {
     local record="${1}"; shift
     local value="$*"
 
+    # If $value contains a space then quote it.
     [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
 
-    [[ "$delete" == 1 ]] && printf 'update delete %s\n' "$record"
-    [[ "$add" == 1 ]] && printf 'update add %s 3600 IN %s %s\n' "$record" "${dns_type}" "$value"
+    [[ "$delete" == 1 ]] && printf 'update delete %s IN %s %s\n' "$record" "$dns_type" "$value"
+    [[ "$add" == 1 ]] && printf 'update add %s 3600 IN %s %s\n' "$record" "$dns_type" "$value"
     printf 'send\n'
 }
 
