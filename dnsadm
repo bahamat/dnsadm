@@ -62,13 +62,7 @@ show () {
 add=0
 delete=0
 
-if [[ "$#" -lt 4 ]]; then
-    echo "Not enough arguments" >&2
-    usage; exit 1
-fi
-
 action="$1"; shift
-dns_type=$( tr '[:lower:]' '[:upper:]' <<< "$1" ); shift
 
 case $action in
     add ) add=1;;
@@ -77,6 +71,12 @@ case $action in
     * ) usage; exit 1;;
 esac
 
+if ( [[ $delete -eq 1 ]] && [[ "$#" -lt 2 ]] ) || ( [[ "$delete" -eq 0 ]] && [[ "$#" -lt 3 ]] ); then
+    echo "Not enough arguments" >&2
+    usage; exit 1
+fi
+
+dns_type=$( tr '[:lower:]' '[:upper:]' <<< "$1" ); shift
 if [[ "${dns_type}" == "PTR" ]]; then
     value="${1}."; shift
     record=$(to_ptr "$1")
