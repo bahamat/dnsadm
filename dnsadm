@@ -1,0 +1,89 @@
+#!/bin/bash
+
+#   Copyright 2015 Brian Bennett
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+key_file='/var/run/named/session.key'
+
+usage () {
+    printf "Usage:\n"
+    printf "\t%s [add|delete|replace] type name address\n" "$0"
+}
+
+to_ptr () {
+    # Convert address to .arpa
+    # :param 1: Address to convert
+    # :returns: in-addr.arpa or ip6.arpa formatted string
+    dig +nocmd +noall +question "@localhost" -x "$1" | awk '{print substr($1,2)}'
+}
+
+prepare () {
+    # Prepare nsupdate text
+    # :param 1: Resource Record type
+    # :param 2: Resource Record name
+    # :param 3: Resource Record value
+    # :returns: nsupdate commands
+    local dns_type="$1"; shift
+    local record="${1}"; shift
+    local value="$*"
+
+    [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
+
+    [[ "$delete" == 1 ]] && printf 'update delete %s\n' "$record"
+    [[ "$add" == 1 ]] && printf 'update add %s 3600 IN %s %s\n' "$record" "${dns_type}" "$value"
+    printf 'send\n'
+}
+
+#:- show :rrtype :record: value | Display live DNS entries
+show () {
+    # Display DNS records
+    # :param 1: Resource Record type
+    # :param 2: Resource Record name
+    # :param 4: Resource Record value
+    local dns_type="$1"; shift
+    local record="$1"; shift
+    local value="$1";
+
+    echo ";RESULTS"
+    dig +noall +nocomments +question +answer -t "$dns_type" "$record" @localhost
+}
+
+add=0
+delete=0
+
+if [[ "$#" -lt 4 ]]; then
+    echo "Not enough arguments" >&2
+    usage; exit 1
+fi
+
+action="$1"; shift
+dns_type=$( tr '[:lower:]' '[:upper:]' <<< "$1" ); shift
+
+case $action in
+    add ) add=1;;
+    del|delete ) delete=1;;
+    update|replace ) add=1; delete=1;;
+    * ) usage; exit 1;;
+esac
+
+if [[ "${dns_type}" == "PTR" ]]; then
+    value="${1}."; shift
+    record=$(to_ptr "$1")
+else
+    record="$1"; shift
+    value="$*"
+fi
+
+prepare "$dns_type" "$record" "$value" | nsupdate -l || echo "Update failed!" >&2
+show "$dns_type" "$record" "$value"
