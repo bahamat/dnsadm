@@ -6,4 +6,4 @@ dnsadm:
 
 .PHONY: install
 install: dnsadm
-	install $< $(DESTDIR)$(PREFIX)/bin/$<
+	install dnsadm $(DESTDIR)$(PREFIX)/bin/dnsadm
