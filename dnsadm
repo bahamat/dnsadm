@@ -14,11 +14,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-key_file='/var/run/named/session.key'
+# key_file='/var/run/named/session.key'
 
 usage () {
     printf "Usage:\n"
-    printf "\t%s [add|delete|replace] type name address\n" "$0"
+    printf "\t%s [add|delete|replace] type name address\n\n" "$0"
+    printf "\ttype:    Resource Record Type\n"
+    printf "\tname:    Resource Record Name\n"
+    printf "\taddress: Resource Record IP address or quoted string\n"
 }
 
 to_ptr () {
@@ -41,8 +44,20 @@ prepare () {
     # If $value contains a space then quote it.
     [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
 
-    [[ "$delete" == 1 ]] && printf 'update delete %s IN %s %s\n' "$record" "$dns_type" "$value"
-    [[ "$add" == 1 ]] && printf 'update add %s 3600 IN %s %s\n' "$record" "$dns_type" "$value"
+    if (( delete == 1 )) && (( add == 0 )); then
+        # This is a delete only action.
+        # If $value is null, then all record for the resource name are deleted.
+        printf 'update delete %s IN %s %s\n' "$record" "$dns_type" "$value"
+    fi
+
+    if (( delete == 1 )) && (( add == 1 )); then
+        # This is an update action.
+        # In this case, delete all existing records.
+        printf 'update delete %s IN %s\n' "$record" "$dns_type"
+    fi
+
+    (( add == 1 )) && printf 'update add %s 3600 IN %s %s\n' "$record" "$dns_type" "$value"
+
     printf 'send\n'
 }
 
@@ -72,12 +87,14 @@ case $action in
     * ) usage; exit 1;;
 esac
 
-if ( [[ $delete -eq 1 ]] && [[ "$#" -lt 2 ]] ) || ( [[ "$delete" -eq 0 ]] && [[ "$#" -lt 3 ]] ); then
-    echo "Not enough arguments" >&2
+dns_type=$( tr '[:lower:]' '[:upper:]' <<< "$1" ); shift
+
+if ( (( delete == 1 )) && (( $# < 1 )) ) ||
+   ( ( (( delete == 0 )) || [[ "$dns_type" == "PTR" ]] ) && (( $# < 2 )) ); then
+    echo "Not enough arguments." >&2
     usage; exit 1
 fi
 
-dns_type=$( tr '[:lower:]' '[:upper:]' <<< "$1" ); shift
 if [[ "${dns_type}" == "PTR" ]]; then
     value="${1}."; shift
     record=$(to_ptr "$1")
