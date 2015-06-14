@@ -1,0 +1,175 @@
+'\" te
+.\" Copyright 2015, Brian Bennett.
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\" http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.TH dnsadm 1 "8 Jun 2015" "dnsadm" "DNS Zone Administration"
+.SH NAME
+dnsadm \- Simple Dynamic DNS update utility
+.SH SYNOPSIS
+.LP
+.nf
+\fBdnsadm add\fR \fItype\fR \fIname\fR \fIvalue\fR
+\fBdnsadm del\fR \fItype\fR \fIname\fR \fIvalue\fR
+\fBdnsadm update\fR \fItype\fR \fIname\fR \fIvalue\fR
+.fi
+
+.SH "DESCRIPTION"
+The \fBdnsadm\fR aims to be a simpler interface to \fBnsupdate\fR command
+for use locally on a DNS zone master. In particular adding \fBPTR\fR records
+can be made without using \fB.arpa\fR notation.
+
+\fBdnsadm\fR runs \fBnsupdate\fR in local-only mode. In order to work properly,
+\fBnsupdate\fR must be in your \fI$PATH\fR, you must be able to read
+\fI/var/run/named.session.key\fR and each zone must be configured for local
+updates.
+
+E.g.:
+
+.IP
+.nf
+\f[C]
+zone\ "example.com"\ {
+\ \ \ \ type\ master;
+\ \ \ \ file\ "db.example.com";
+\ \ \ \ update\-policy\ local;
+};
+\f[]
+.fi
+
+.SH SUBCOMMANDS
+The following subcommands are supported:
+
+.SS dnsadm add \fItype name value\fR
+Add a new DNS record. If \fItype\fR is \fBPTR\fR then the value will
+be converted to \fB.arpa\fR notation and used as the record name, while
+\fIname\fR will be used as the FQDN record value.
+
+.SS dnsadm del \fItype name\fR [ \fIvalue\fR ]
+Remove an existing DNS record. If \fItype\fR is \fBPTR\fR then the value will
+be converted to \fB.arpa\fR notation and used as the record name, while
+\fIname\fR will be used as the FQDN record value. If \fIvalue\fR is not given
+then \fBall\fR records for the name will be removed.
+
+.SS dnsadm update \fItype name value\fR
+Replace existing DNS record(s). Internally, this calls \fBdel\fR then \fBadd\fR.
+An update action will delete \fBall\fR records matching \fIname\fR, replaced
+with a single record with \fIvalue\fR as its value. For \fIPTR\fR records, both
+\fIname\fR and \fIvalue\fR are required.
+
+.SH EXAMPLES
+
+.LP
+IPv6 Records
+.sp
+.in +2
+.nf
+# \fBdnsadm add AAAA foo.example.com 2001:db8::200\fR
+;RESULTS
+;foo.example.com.            IN      A
+foo.example.com.     3600    IN      A       2001:db8::200
+
+# \fBdnsadm update AAAA foo.example.com 2001:db8::201\fR
+;RESULTS
+;foo.example.com.            IN      A
+foo.example.com.     3600    IN      A       2001:db8::201
+
+# \fBdnsadm del AAAA foo.example.com\fR
+;RESULTS
+;foo.example.com.            IN      A
+.fi
+.in -2
+.sp
+
+.LP
+IPv4 Records
+.sp
+.in +2
+.nf
+# \fBdnsadm add A foo.example.com 198.51.100.200\fR
+;RESULTS
+;foo.example.com.            IN      A
+foo.example.com.     3600    IN      A       198.51.100.200
+
+# \fBdnsadm update A foo.example.com 198.51.100.201\fR
+;RESULTS
+;foo.example.com.            IN      A
+foo.example.com.     3600    IN      A       198.51.100.201
+
+# \fBdnsadm del A foo.example.com\fR
+;RESULTS
+;foo.example.com.            IN      A
+.fi
+.in -2
+.sp
+
+.LP
+PTR in\-addr.arpa records
+.sp
+.in +2
+.nf
+# \fBdnsadm add PTR foo.example.com 198.51.100.200\fR
+;RESULTS
+;200.100.51.198.in\-addr.arpa.       IN      PTR
+200.100.51.198.in\-addr.arpa. 3600   IN      PTR     foo.example.com.
+
+# \fBdnsadm update PTR foo.example.com 198.51.100.201\fR
+;RESULTS
+;201.100.51.198.in\-addr.arpa.       IN      PTR
+201.100.51.198.in\-addr.arpa. 3600   IN      PTR     foo.example.com.
+
+# \fBdnsadm del PTR foo.example.com 198.51.100.201\fR
+;RESULTS
+;201.100.51.198.in\-addr.arpa.       IN      PTR
+.fi
+.ni -2
+.sp
+
+.LP
+PTR ip6.arpa
+.sp
+.in +2
+.nf
+# \fBdnsadm add PTR foo.example.com 2001:db8::200\fR
+;RESULTS
+;0.0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa. IN PTR
+0.0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa. 3600 IN PTR foo.example.com.
+
+# \fBdnsadm update PTR foo.example.com 2001:db8::201\fR
+;RESULTS
+;1.0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa. IN PTR
+1.0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa. 3600 IN PTR foo.example.com.
+
+# \fBdnsadm del PTR foo.example.com 2001:db8::201\fR
+;RESULTS
+;1.0.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.\ IN\ PTR
+.fi
+.in -2
+.sp
+
+.SH BUGS
+See \fIhttps://github.com/bahamat/dnsadm/issues\fR
+
+.SH FILES
+.PP
+\fBnsupdate\fR
+.RS
+nsupdate binary wich must be in your $PATH
+.RE
+.PP
+\fB/var/run/named/session.key\fR
+.RS
+TSIG key for use in local-only mode
+.RE
+
+.SH "SEE ALSO"
+nsupdate(1)
