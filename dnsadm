@@ -72,7 +72,13 @@ show () {
     local value="$1";
 
     echo ";RESULTS"
-    dig +noall +nocomments +question +answer -t "$dns_type" "$record" @localhost
+    local dig_args=("+noall" "+nocomments" "+question")
+    case $dns_type in
+        NS) dig_args+=("+authority" "+additional");;
+        *)  dig_args+=("+answer");;
+    esac
+    dig_args+=("-t" "$dns_type" "$record" "@localhost")
+    dig "${dig_args[@]}"
 }
 
 add=0
