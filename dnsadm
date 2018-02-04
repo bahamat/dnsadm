@@ -59,9 +59,17 @@ prepare () {
         # This is an update action.
         # In this case, delete all existing records.
         printf 'update delete %s IN %s\n' "$record" "$dns_type"
+        # And if it's a PTR, remove any existing PTRs that match the old
+        # forward name.
+        if [[ $dns_type == PTR ]]; then
+            grep 'ip6' <<< "$record" >/dev/null && forward_type="AAAA"
+            grep 'in-addr' <<< "$record" >/dev/null && forward_type="A"
+            old_ip=$(to_ptr $(dig -t "$forward_type" +short "$value" @localhost))
+            printf 'update delete %s IN %s %s\n' "$old_ip" "$dns_type"
+        fi
     fi
 
-    (( add == 1 )) && printf 'update add %s "${DNSADM_TTL:-3600}"  IN %s %s\n' "$record" "$dns_type" "$value"
+    (( add == 1 )) && printf 'update add %s %d IN %s %s\n' "$record" "${DNSADM_TTL:-3600}" "$dns_type" "$value"
 
     printf 'send\n'
 }
