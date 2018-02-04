@@ -46,8 +46,13 @@ prepare () {
     local record="${1}"; shift
     local value="$*"
 
-    # If $value contains a space then quote it.
-    [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
+    case $dns_type in
+        MX|SRV) ;;
+        *)
+            # If $value contains a space then quote it.
+            [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
+            ;;
+    esac
 
     if (( delete == 1 )) && (( add == 0 )); then
         # This is a delete only action.
