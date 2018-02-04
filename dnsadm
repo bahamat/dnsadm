@@ -61,7 +61,7 @@ prepare () {
         printf 'update delete %s IN %s\n' "$record" "$dns_type"
     fi
 
-    (( add == 1 )) && printf 'update add %s 3600 IN %s %s\n' "$record" "$dns_type" "$value"
+    (( add == 1 )) && printf 'update add %s "${DNSADM_TTL:-3600}"  IN %s %s\n' "$record" "$dns_type" "$value"
 
     printf 'send\n'
 }
