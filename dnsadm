@@ -16,6 +16,11 @@
 
 # key_file='/var/run/named/session.key'
 
+if [[ -n "$TRACE" ]]; then
+    export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+    set -o xtrace
+fi
+
 usage () {
     printf "Usage:\n"
     printf "\t%s [add|delete|replace] type name address\n\n" "$0"
