@@ -114,5 +114,15 @@ else
     value="$*"
 fi
 
-prepare "$dns_type" "$record" "$value" | nsupdate -l || echo "Update failed!" >&2
+prepare "$dns_type" "$record" "$value" | nsupdate -l
+
+if (( $? == 0 )); then
+    pri='audit.info'
+    tag="${0##*/}" # basename $0
+    [[ $add == 1 ]] && logger -p "$pri" -t "$tag" "$LOGNAME added $dns_type $record $value"
+    [[ $delete == 1 ]] && logger -p "$pri" -t "$tag" "$LOGNAME removed $dns_type $record $value"
+else
+    echo "Update failed!" >&2
+fi
+
 show "$dns_type" "$record" "$value"
