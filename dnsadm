@@ -36,6 +36,10 @@ to_ptr () {
     dig +nocmd +noall +question "@localhost" -x "$1" | awk '{print substr($1,2)}'
 }
 
+get_current_ttl () {
+    dig +noall +answer -t $dns_type $record @localhost | awk '{print $2}'
+}
+
 prepare () {
     # Prepare nsupdate text
     # :param 1: Resource Record type
@@ -126,6 +130,14 @@ else
     record="$1"; shift
     value="$*"
 fi
+
+case $action in
+    update|replace )
+        if [[ -z $DNSADM_TTL ]]; then
+            DNSADM_TTL=$(get_current_ttl)
+        fi
+    ;;
+esac
 
 prepare "$dns_type" "$record" "$value" | nsupdate -l
 
