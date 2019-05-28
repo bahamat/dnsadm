@@ -26,4 +26,5 @@ clean:
 
 test:
 	echo $(MAKESYSPATH)
+	echo $(PREFIX)
 	@true

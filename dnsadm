@@ -51,7 +51,7 @@ prepare () {
     local value="$*"
 
     case $dns_type in
-        MX|SRV) ;;
+        MX|SRV|SSHFP) ;;
         *)
             # If $value contains a space then quote it.
             [[ "$value" =~ [[:alnum:]][[:space:]][[:alnum:]] ]] && value="\"$value\""
