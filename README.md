@@ -2,7 +2,7 @@
 
 A small shell script to make DNS management slightly easier.
 
-# Requirements
+## Requirements
 
 * nsupdate (comes with `bind`).
 * Permission to read `/var/run/named/session.key`.
@@ -17,7 +17,7 @@ E.g.:
         update-policy local;
     };
 
-# Usage
+## Usage
 
 `dnsadm` accepts the following subcommands:
 
@@ -42,7 +42,6 @@ IPv6
     # dnsadm del AAAA foo.example.com
     ;RESULTS
     ;foo.example.com.            IN      A
-
 
 IPv4
 
@@ -77,7 +76,6 @@ PTR in-addr.arpa
     ;201.100.51.198.in-addr.arpa.       IN      PTR
 
 PTR ip6.arpa
-
 
     # dnsadm add PTR foo.example.com 2001:db8::200
     ;RESULTS

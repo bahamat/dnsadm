@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#   Copyright 2015 Brian Bennett
+#   Copyright 2020 Brian Bennett
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 # key_file='/var/run/named/session.key'
 
+# shellcheck disable=2154
 if [[ -n "$TRACE" ]]; then
     export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
     set -o xtrace
@@ -37,7 +38,7 @@ to_ptr () {
 }
 
 get_current_ttl () {
-    dig +noall +answer -t $dns_type $record @localhost | awk '{print $2}'
+    dig +noall +answer -t "$dns_type" "$record" @localhost | awk '{print $2}'
 }
 
 prepare () {
@@ -73,8 +74,8 @@ prepare () {
         if [[ $dns_type == PTR ]]; then
             grep 'ip6' <<< "$record" >/dev/null && forward_type="AAAA"
             grep 'in-addr' <<< "$record" >/dev/null && forward_type="A"
-            old_ip=$(to_ptr $(dig -t "$forward_type" +short "$value" @localhost))
-            printf 'update delete %s IN %s %s\n' "$old_ip" "$dns_type"
+            old_ip=$(to_ptr "$(dig -t "$forward_type" +short "$value" @localhost)")
+            printf 'update delete %s IN %s\n' "$old_ip" "$dns_type"
         fi
     fi
 
@@ -137,11 +138,16 @@ case $action in
             DNSADM_TTL=$(get_current_ttl)
         fi
     ;;
+    *)
+        # do nothing
+        :
+    ;;
 esac
 
 prepare "$dns_type" "$record" "$value" | nsupdate -l
+rval=$?
 
-if (( $? == 0 )); then
+if (( rval == 0 )); then
     pri='audit.info'
     tag="${0##*/}" # basename $0
     [[ $add == 1 ]] && logger -p "$pri" -t "$tag" "$LOGNAME added $dns_type $record $value"
