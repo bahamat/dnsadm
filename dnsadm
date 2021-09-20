@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#   Copyright 2020 Brian Bennett
+#   Copyright 2021 Brian Bennett
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -34,11 +34,11 @@ to_ptr () {
     # Convert address to .arpa
     # :param 1: Address to convert
     # :returns: in-addr.arpa or ip6.arpa formatted string
-    dig +nocmd +noall +question "@localhost" -x "$1" | awk '{print substr($1,2)}'
+    dig +nocmd +noall +question @"$authority" -x "$1" | awk '{print substr($1,2)}'
 }
 
 get_current_ttl () {
-    dig +noall +answer -t "$dns_type" "$record" @localhost | awk '{print $2}'
+    dig +noall +answer -t "$dns_type" "$record" @"$authority" | awk '{print $2}'
 }
 
 prepare () {
@@ -59,6 +59,10 @@ prepare () {
             ;;
     esac
 
+    if [[ -n $DNSADM_SERVER ]]; then
+        printf 'server %s\n' "$DNSADM_SERVER"
+    fi
+
     if (( delete == 1 )) && (( add == 0 )); then
         # This is a delete only action.
         # If $value is null, then all record for the resource name are deleted.
@@ -74,7 +78,7 @@ prepare () {
         if [[ $dns_type == PTR ]]; then
             grep 'ip6' <<< "$record" >/dev/null && forward_type="AAAA"
             grep 'in-addr' <<< "$record" >/dev/null && forward_type="A"
-            old_ip=$(to_ptr "$(dig -t "$forward_type" +short "$value" @localhost)")
+            old_ip=$(to_ptr "$(dig -t "$forward_type" +short "$value" @"$authority")")
             printf 'update delete %s IN %s\n' "$old_ip" "$dns_type"
         fi
     fi
@@ -100,7 +104,7 @@ show () {
         NS) dig_args+=("+authority" "+additional");;
         *)  dig_args+=("+answer");;
     esac
-    dig_args+=("-t" "$dns_type" "$record" "@localhost")
+    dig_args+=("-t" "$dns_type" "$record" @"$authority")
     dig "${dig_args[@]}"
 }
 
@@ -132,6 +136,12 @@ else
     value="$*"
 fi
 
+if [[ -n $DNSADM_SERVER ]]; then
+    authority="$DNSADM_SERVER"
+else
+    authority=$(dig -t soa +noall +authority test.zonename.org | awk '{print $5}')
+fi
+
 case $action in
     update|replace )
         if [[ -z $DNSADM_TTL ]]; then
@@ -144,11 +154,18 @@ case $action in
     ;;
 esac
 
-prepare "$dns_type" "$record" "$value" | nsupdate -l
+nsu_args=( -l )
+if [[ -n $DNSADM_TSIGKEY ]]; then
+    nsu_args=( -y "$DNSADM_TSIGKEY" )
+fi
+prepare "$dns_type" "$record" "$value" | nsupdate "${nsu_args[@]}"
 rval=$?
 
 if (( rval == 0 )); then
-    pri='audit.info'
+    case $(uname -s) in
+        SunOS) pri='audit.info' ;;
+        *) pri='user.info' ;;
+    esac
     tag="${0##*/}" # basename $0
     [[ $add == 1 ]] && logger -p "$pri" -t "$tag" "$LOGNAME added $dns_type $record $value"
     [[ $delete == 1 ]] && logger -p "$pri" -t "$tag" "$LOGNAME removed $dns_type $record $value"

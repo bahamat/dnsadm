@@ -1,5 +1,5 @@
 '\" te
-.\" Copyright 2015, Brian Bennett.
+.\" Copyright 2021, Brian Bennett.
 .\" Licensed under the Apache License, Version 2.0 (the "License");
 .\" you may not use this file except in compliance with the License.
 .\" You may obtain a copy of the License at
@@ -12,7 +12,7 @@
 .\" See the License for the specific language governing permissions and
 .\" limitations under the License.
 .\"
-.TH dnsadm 1 "8 Jun 2015" "dnsadm" "DNS Zone Administration"
+.TH dnsadm 1 "20 Sep 2021" "dnsadm" "DNS Zone Administration"
 .SH NAME
 dnsadm \- Simple Dynamic DNS update utility
 .SH SYNOPSIS
@@ -28,10 +28,13 @@ The \fBdnsadm\fR aims to be a simpler interface to \fBnsupdate\fR command
 for use locally on a DNS zone master. In particular adding \fBPTR\fR records
 can be made without using \fB.arpa\fR notation.
 
-\fBdnsadm\fR runs \fBnsupdate\fR in local-only mode. In order to work properly,
-\fBnsupdate\fR must be in your \fI$PATH\fR, you must be able to read
-\fI/var/run/named.session.key\fR and each zone must be configured for local
-updates.
+By default \fBdnsadm\fR runs \fBnsupdate\fR in local-only mode. In order for
+local mode to work properly, \fBnsupdate\fR must be in your \fI$PATH\fR, you
+must be able to read \fI/var/run/named.session.key\fR and each zone must be
+configured for local updates. If the environment variable \fBTSIGKEY\fR is
+set, then the defined key will be used in remote mode. In this mode, reqeusts
+are sent to the server specified in the SOA record. See \fBnamed.conf(5)\fR for
+details on configuring the update-policy.
 
 E.g.:
 
@@ -173,3 +176,4 @@ TSIG key for use in local-only mode
 
 .SH "SEE ALSO"
 nsupdate(1)
+named.conf(5)
