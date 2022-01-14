@@ -38,7 +38,7 @@ to_ptr () {
 }
 
 get_current_ttl () {
-    dig +noall +answer -t "$dns_type" "$record" @"$authority" | awk '{print $2}'
+    dig +noall +answer -t "$dns_type" "$record" @"$authority" | head -1 | awk '{print $2}'
 }
 
 prepare () {
