@@ -101,7 +101,7 @@ show () {
     echo ";RESULTS"
     local dig_args=("+noall" "+nocomments" "+question")
     case $dns_type in
-        NS) dig_args+=("+authority" "+additional");;
+        NS) dig_args+=("+authority" "+answer" "+additional");;
         *)  dig_args+=("+answer");;
     esac
     dig_args+=("-t" "$dns_type" "$record" @"$authority")
@@ -139,7 +139,7 @@ fi
 if [[ -n $DNSADM_SERVER ]]; then
     authority="$DNSADM_SERVER"
 else
-    authority=$(dig -t soa +noall +authority test.zonename.org | awk '{print $5}')
+    authority=$(dig -t soa +noall +authority "$record" | awk '{print $5}')
 fi
 
 case $action in
